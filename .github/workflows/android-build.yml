@@ -26,17 +26,32 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Configure Android SDK
+        run: |
+          SDK_ROOT="/usr/local/lib/android/sdk"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
 
-      - name: Install SDK
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Không tìm thấy sdkmanager!"
+            exit 1
+          fi
+
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+
+      - name: Install Android SDK packages
         run: |
           yes | sdkmanager --licenses
-          sdkmanager "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
 
       - name: Extract source
         run: |
           mkdir -p extracted
+
           if [ -f TikTokLegacy-starter.zip ]; then
             unzip -q TikTokLegacy-starter.zip -d extracted
           elif [ -f TikTokLegacy-GitHub-Actions.zip ]; then
