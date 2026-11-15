@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - 'TikTokLegacy-starter.zip'
+      - 'TikTokLegacy-starter 2.zip'
       - 'TikTokLegacy-GitHub-Actions.zip'
       - '.github/workflows/android-build.yml'
 
