@@ -6,6 +6,7 @@ on:
   push:
     paths:
       - 'TikTokLegacy-starter.zip'
+      - 'TikTokLegacy-GitHub-Actions.zip'
       - '.github/workflows/android-build.yml'
 
 permissions:
@@ -14,14 +15,16 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Set up JDK 11
-        uses: actions/setup-java@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '11'
+          java-version: '17'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -33,18 +36,39 @@ jobs:
 
       - name: Extract source
         run: |
-          unzip -q TikTokLegacy-starter.zip -d extracted
+          mkdir -p extracted
+          if [ -f TikTokLegacy-starter.zip ]; then
+            unzip -q TikTokLegacy-starter.zip -d extracted
+          elif [ -f TikTokLegacy-GitHub-Actions.zip ]; then
+            unzip -q TikTokLegacy-GitHub-Actions.zip -d extracted
+          else
+            echo "Không tìm thấy file ZIP source!"
+            exit 1
+          fi
 
-      - uses: gradle/actions/setup-gradle@v3
+      - name: Find project folder
+        run: |
+          if [ -f extracted/TikTokLegacy/settings.gradle ]; then
+            echo "PROJECT_DIR=extracted/TikTokLegacy" >> "$GITHUB_ENV"
+          elif [ -f extracted/settings.gradle ]; then
+            echo "PROJECT_DIR=extracted" >> "$GITHUB_ENV"
+          else
+            echo "Không tìm thấy settings.gradle!"
+            find extracted -maxdepth 3 -type f
+            exit 1
+          fi
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '7.5'
 
       - name: Build APK
-        working-directory: extracted/TikTokLegacy
-        run: gradle --no-daemon assembleDebug
+        run: gradle --no-daemon -p "$PROJECT_DIR" assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: TikTokLegacy-debug-apk
-          path: extracted/TikTokLegacy/app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
